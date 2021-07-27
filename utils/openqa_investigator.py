@@ -7,25 +7,47 @@ HISTORY_LEN = 200
 Q_VERSION = "4.1"
 FLAVOR = "pull-requests"
 
-def print_tests_failures(test_suite, test_name, test_title):
+def print_tests_failures(test_suites, test_name, test_title):
     """
-    Prints the historical data of a particular of job failures for a
-    particular test pattern
+    Compares failures across test suites from the same job
     """
 
     print("Summary:")
     print("\tLooking for failures of test {}/{}".format(test_name,
-                                                          test_title))
+                                                        test_title))
+    print("\tacross test suites: {}".format(str(test_suites)))
     print("\ton the last {} failed tests".format(HISTORY_LEN))
-    print("\nsuite: ", test_suite)
 
-    jobs = OpenQA.get_latest_job_ids(test_suite, version=Q_VERSION,
-                                     n=HISTORY_LEN, result="failed",
-                                     flavor=FLAVOR)
+    jobs_ids = {}
+    prev_job_count = 0
 
-    for job_id in jobs:
-        job = JobData(job_id)
-        print_test_failure(job, test_suite, test_name, test_title)
+    for test_suite in test_suites:
+        jobs_ids[test_suite] = \
+            OpenQA.get_latest_job_ids(test_suite, version=Q_VERSION,
+                                      n=HISTORY_LEN, result="failed",
+                                      flavor=FLAVOR)
+        if prev_job_count and jobs_ids[test_suite] != prev_job_count:
+            print("ERROR: test suites with different history lengths\
+                are currently not supported")
+            exit(1)
+        else:
+            prev_job_count = len(jobs_ids[test_suite])
+
+    for (i, _) in enumerate(jobs_ids):
+        parent_job_id = 0
+
+        for test_suite in test_suites:
+            job = JobData(jobs_ids[test_suite][i])
+
+            if parent_job_id and job.get_job_parent_id() != parent_job_id:
+                print("ERROR: tests don't have same parent")
+                exit(1)
+            else:
+                parent_job_id = job.get_job_parent_id()
+
+            print("Test suite: {}".format(test_suite))
+            print_test_failures(job, test_name, test_title)
+            print("\n------\n")
 
 def print_test_failure(job, test_suite, test_name, test_title):
     """
@@ -55,9 +77,9 @@ def main():
         description="Look for unstable tests")
 
     parser.add_argument(
-        "--suite",
-        help="Test suite name"
-             "(e.g.: system_tests_splitgpg)")
+        "--suites",
+        help="comma-separated list of test suites"
+             "(e.g.: system_tests_network,system_tests_network_ipv6")
 
     parser.add_argument(
         "--test",
@@ -72,9 +94,11 @@ def main():
         test_name = args.test
         test_title = "*"
 
-    if args.test:
-        print_tests_failures(args.suite, test_name, test_title)
+    if args.suites:
+        compare_test_suites(args.suites.split(","), test_name, test_title)
 
+    if args.test:
+        print_tests_failures(args.suites, test_name, test_title)
 
 if __name__ == '__main__':
     main()

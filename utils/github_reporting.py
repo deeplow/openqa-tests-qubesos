@@ -158,8 +158,11 @@ class JobData:
 
     def get_job_start_time(self):
         json_data = self.get_job_details()
-
         return json_data['job']['t_started']
+
+    def get_job_parent_id(self):
+        json_data = self.get_job_details()
+        return json_data['job']['parents']['Chained'][0]
 
     def get_job_details(self):
         if self.job_details is None:
