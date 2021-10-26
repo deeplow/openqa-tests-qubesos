@@ -1,4 +1,4 @@
-from github_reporting import OpenQA, JobData, TestFailure
+from github_reporting import OpenQA, JobData, TestFailure, PackageName
 from argparse import ArgumentParser
 import textwrap
 from copy import deepcopy
@@ -259,23 +259,6 @@ def plot_group_by_test(title, jobs, test_suite, outfile=None):
 def plot_group_by_template(title, jobs, test_suite, outfile=None):
     plot_simple(title, jobs, test_suite, group_by_template, outfile)
 
-    def group_by_template(test):
-        # obtain template name according to construction format of
-        # https://github.com/QubesOS/qubes-core-admin/blob/f60334/qubes/tests/__init__.py#L1352
-        # Will catch most common tests.
-        template = test.name.split("_")[-1]
-        template = template.split("-pool")[0] # remove trailing "-pool"
-
-        if re.search(r"^[a-z\-]+\-\d+(\-xfce)?$", template): # [template]-[ver]
-            return template
-
-        msg  = "Test's name '{}' doesn't specify a template.\n".format(test.name)
-        msg += "  The test suite '{}' may not include".format(test_suite)
-        msg += "template information in the test's name."
-        raise Exception(msg)
-
-    plot_simple(title, jobs, test_suite, group_by_template, outfile)
-
 def plot_group_by_worker(title, jobs, test_suite, outfile):
 
     def group_by(test):
@@ -283,6 +266,51 @@ def plot_group_by_worker(title, jobs, test_suite, outfile):
         return job.get_job_details()['job']['assigned_worker_id']
 
     plot_simple(title, jobs, test_suite, group_by, outfile)
+
+def plot_group_by_package_version(title, jobs, test_suite, package_alt_names,
+                                  outfile=None):
+    """ Plots jobs by template and associated kernel version """
+
+    def get_test_package_info(test):
+        template = group_by_template(test)
+        job = JobData(test.job_id)
+        parent_job = JobData(job.get_job_parent())
+        packages = parent_job.get_packages_for_template(template, mapped=False)
+
+        if packages == None:
+            package_name = "package list not found"
+            package_version = "package list not found"
+        else:
+            package_found = False
+            for package in packages:
+                if package.package_name in package_alt_names:
+                    print(package.package_name)
+                    package_found = True
+                    package_version = package.version
+                    package_name = package.package_name
+                    break
+
+            if not package_found:
+                package_name = "package not found"
+                package_version = "package not found"
+
+        return {
+            'template': template,
+            'package_name': package_name,
+            'package_version': package_version
+        }
+
+    def group_by_test_template(test):
+        return get_test_package_info(test)['template']
+
+    def group_by_package_version(test):
+        return get_test_package_info(test)['package_version']
+
+    title = "versions of package {} or equivalent".format(package_alt_names[0])
+    plot_strip(title, jobs, test_suite,
+               y_fn=group_by_package_version,
+               hue_fn=group_by_test_template,
+               outfile=outfile)
 
 def plot_group_by_error(title, jobs, test_suite, outfile=None):
     hue_fn=group_by_template
@@ -527,6 +555,16 @@ def main():
     elif args.output == "plot_errors":
         title = "Failure By Error\n" + summary
         plot_group_by_error(title, jobs, args.suite, plot_filepath)
+    elif args.output == "plot_kernel_version":
+        title = "Failure By kernel version\n" + summary
+        kernel_pkg_names = [
+            "linux-image-amd64", # debian
+            "kernel" # fedora
+            # FIXME could not find kerne's package name for whonix
+        ]
+        plot_group_by_package_version(title, jobs, args.suite,
+                                      kernel_pkg_names,
+                                      plot_filepath)
     elif args.output == "plot_worker":
         title = "Failure By Worker\n" + summary
         plot_group_by_worker(title, jobs, args.suite, plot_filepath)

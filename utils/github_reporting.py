@@ -27,39 +27,48 @@ name_mapping = {}
 
 
 class PackageName:
-    def __init__(self, line):
+    def __init__(self, line, mapped=True):
         self.package_name = None
         self.version = None
+
+        package_name = None
+        version = None
 
         # meaningful Debian lines starts with 'ii'
         if line.startswith('ii '):
             columns = line.split()
-            raw_name = columns[1]
-            raw_version = columns[2]
+            package_name = columns[1]
+            version = columns[2]
 
-            if raw_name in name_mapping:
-                self.package_name = name_mapping[raw_name]
+            if '-' in version:
+                version = version.split('-', maxsplit=1)[0]
+            elif '+' in version:
+                version = version.split('+', maxsplit=1)[0]
+            else:
+                version = version
 
-                if '-' in raw_version:
-                    self.version = raw_version.split('-', maxsplit=1)[0]
-                elif '+' in raw_version:
-                    self.version = raw_version.split('+', maxsplit=1)[0]
-                else:
-                    self.version = raw_version
-                return
+        # ignore debian header line
+        elif line.startswith('+++-============='):
+            return
 
         # Fedora lines have no spaces
-        if ' ' not in line:
+        elif ' ' not in line:
             try:
                 line_parts = line.split('-')
                 package_name = "-".join(line_parts[:-2])
-                if package_name in name_mapping:
-                    self.version = line_parts[-2]
-                    self.package_name = name_mapping[package_name]
+                version = line_parts[-2]
             except IndexError:
                 # the package name was malformed
                 # and had an insufficient amount of '-'
                 return
+
+        if mapped:
+            if package_name in name_mapping:
+                self.package_name = name_mapping[package_name]
+                self.version = version
+        else:
+            self.package_name = package_name
+            self.version = version
 
     def __eq__(self, other):
         return self.package_name == other.package_name \
@@ -265,6 +274,30 @@ class JobData:
             return "{}/jobs/{}/details".format(OPENQA_API, job_id)
         else:
             return "{}/jobs/{}".format(OPENQA_API, job_id)
+
+    def get_packages_for_template(self, template, mapped=True):
+
+        logging.debug("\n[{}] searching for {}".format(self.job_id, template))
+
+        logfile = "update-template-{}-packages.txt".format(template)
+        log_url  = "{}/tests/{}/file/{}".format(OPENQA_URL, self.job_id, logfile)
+        packages = set()
+
+        packages_req = requests.get(log_url)
+
+        if packages_req.status_code != 200:
+            logging.error("didn't find log for template '{}' in job '{}'"\
+                .format(template, self.job_id))
+            return
+
+        packages_log = packages_req.text.split('\n')
+
+        for line in packages_log:
+            package = PackageName(line, mapped)
+            if package.package_name:
+                packages.add(package)
+
+        return packages
 
     def get_related_github_objects(self):
         notification_issues = self.get_notification_issue()
