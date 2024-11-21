@@ -49,8 +49,12 @@ sub run {
     assert_script_run('sdw-admin --validate');
 
     assert_script_run('env xset -dpms; env xset s off', valid => 0, timeout => 10); # disable screen blanking during long command
-    assert_script_run('sdw-admin --apply | tee /tmp/sdw-admin-apply.log',  timeout => 2400);  # long timeout due to slow virt.
-    upload_logs('/tmp/sdw-admin-apply.log');
+    assert_script_run('sdw-admin --apply | tee /tmp/sdw-admin-apply.log',  timeout => 3400);  # long timeout due to slow virt.
+    upload_logs('/tmp/sdw-admin-apply.log', failok => 1);
+
+    # Install autologin dependencies
+    assert_script_run("sudo qubes-dom0-update -y oathtool");
+
     send_key('alt-f4');  # close terminal
 }
 
