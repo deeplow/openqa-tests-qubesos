@@ -32,7 +32,7 @@ sub run {
 
     curl_via_netvm;
 
-    assert_script_run('set -o pipefail'); # Ensure pipes fail
+    assert_script_run('set -o pipefail'); # Ensure pipes fail\
 
     # NOTE: These are done via qvm-run instead of gnome-terminal so that we
     # can know in case they failed.
@@ -49,8 +49,12 @@ sub run {
     assert_script_run('sdw-admin --validate');
 
     assert_script_run('env xset -dpms; env xset s off', valid => 0, timeout => 10); # disable screen blanking during long command
-    assert_script_run('sdw-admin --apply | tee /tmp/sdw-admin-apply.log',  timeout => 2400);  # long timeout due to slow virt.
-    upload_logs('/tmp/sdw-admin-apply.log');
+    assert_script_run('sdw-admin --apply | tee /tmp/sdw-admin-apply.log',  timeout => 6000);  # long timeout due to slow virt.
+    upload_logs('/tmp/sdw-admin-apply.log', failok => 1);
+
+    # Install autologin dependencies
+    assert_script_run("sudo qubes-dom0-update -y oathtool");
+
     send_key('alt-f4');  # close terminal
 }
 

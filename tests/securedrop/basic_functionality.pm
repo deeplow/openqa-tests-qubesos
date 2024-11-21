@@ -15,16 +15,39 @@ use base "installedtest";
 use strict;
 use testapi;
 use networking;
-
+use serial_terminal qw(select_root_console);
 
 sub run {
     my ($self) = @_;
 
-    $self->select_gui_console;
-    assert_screen "desktop";
+    # $self->select_gui_console;
 
-    # Force-fail
-    check_screen('securedrop-client-login-screen', 5)
+    select_root_console;
+
+    background_script_run("qvm-run -p sd-dev \"cd securedrop\; sed -i 's|/dev/stdout|/dev/null|g' securedrop/bin/dev-shell && make dev-tor\" </dev/null 2>&1 | sed 's/^/[SD Server] /'");
+    wait_serial("=> Journalist Interface <=");
+    sleep(600); # wait for onion address to propagate
+
+    # under some circumstances sd-proxy may be powered off
+    assert_script_run('qvm-start sd-proxy --skip-if-running');
+    $self->select_gui_console;
+
+    type_string("journalist");
+    send_key('tab');
+
+    type_string("correct horse battery staple profanity oil chewy");
+    send_key('tab');
+    send_key('tab');
+    select_root_console;
+    my $totp_code = script_output('oathtool --totp --base32 JHCOGO7VCER3EJ4L');
+    $self->select_gui_console;
+    type_string("$totp_code");
+    send_key('ret');
+
+    sleep(60); # Wait for login
+
+    assert_screen("fail-here");
+
 
 }
 
