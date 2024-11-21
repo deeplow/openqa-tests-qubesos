@@ -166,6 +166,8 @@ if (get_var('SYSTEM_TESTS')) {
 }
 
 if (check_var('SECUREDROP_INSTALL', '1')) {
+    autotest::loadtest("tests/securedrop/server_setup.pm");
+
     # Setup sys-whonix connection so it does not interfere later
     autotest::loadtest("tests/whonix_firstrun.pm", name => "Setup_sys-whonix");
 
@@ -178,6 +180,7 @@ if (check_var('SECUREDROP_INSTALL', '1')) {
 
     autotest::loadtest("tests/securedrop/install_reboot_and_update.pm", name => "reboot_and_finish_install");
 } elsif (check_var('SECUREDROP_TEST', "basic_functionality")) {
+    autotest::loadtest("tests/securedrop/server_start.pm");
     autotest::loadtest("tests/securedrop/basic_functionality.pm");
 }
 
