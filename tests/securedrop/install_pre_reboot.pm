@@ -39,7 +39,7 @@ sub run {
     assert_script_run('qvm-run -p work -- gpg --keyserver hkps://keys.openpgp.org --recv-key "2359 E653 8C06 13E6 5295 5E6C 188E DD3B 7B22 E6A3"');
     assert_script_run('qvm-run -p work -- "gpg --armor --export 2359E6538C0613E652955E6C188EDD3B7B22E6A3 > securedrop-release-key.pub"');
     assert_script_run('qvm-run -p work -- sudo rpmkeys --import securedrop-release-key.pub');
-    assert_script_run('qvm-run -p work -- "echo -e \"[sd]\nenabled=1\nbaseurl=https://yum-qa.securedrop.org/workstation/dom0/f37\nname=boostrap\"  | sudo tee /etc/yum.repos.d/securedrop-temp.repo"');
+    assert_script_run('qvm-run -p work -- "echo -e \"[sd]\nenabled=1\nbaseurl=https://yum.securedrop.org/workstation/dom0/f37\nname=boostrap\"  | sudo tee /etc/yum.repos.d/securedrop-temp.repo"');
     assert_script_run('qvm-run -p work -- dnf download -y securedrop-workstation-dom0-config');
     assert_script_run('qvm-run -p work -- "rpm -Kv securedrop-workstation-dom0-config-*.rpm"');  # TODO confirm output is correct
     assert_script_run('qvm-run -p work -- "cat /home/user/securedrop-workstation-dom0-config-*.rpm" > securedrop-workstation.rpm');

@@ -78,7 +78,7 @@ sub run {
 
     $self->select_gui_console;
     assert_screen "desktop";
-    setup_securedrop_server;
+    #setup_securedrop_server;
 }
 
 1;

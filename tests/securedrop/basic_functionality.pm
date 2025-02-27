@@ -20,34 +20,22 @@ use serial_terminal qw(select_root_console);
 sub run {
     my ($self) = @_;
 
-    # $self->select_gui_console;
-
-    select_root_console;
-
-    background_script_run("qvm-run -p sd-dev \"cd securedrop\; sed -i 's|/dev/stdout|/dev/null|g' securedrop/bin/dev-shell && make dev-tor\" </dev/null 2>&1 | sed 's/^/[SD Server] /'");
-    wait_serial("=> Journalist Interface <=");
-    sleep(600); # wait for onion address to propagate
-
-    # under some circumstances sd-proxy may be powered off
-    assert_script_run('qvm-start sd-proxy --skip-if-running');
     $self->select_gui_console;
-
-    type_string("journalist");
-    send_key('tab');
-
-    type_string("correct horse battery staple profanity oil chewy");
-    send_key('tab');
-    send_key('tab');
-    select_root_console;
-    my $totp_code = script_output('oathtool --totp --base32 JHCOGO7VCER3EJ4L');
-    $self->select_gui_console;
-    type_string("$totp_code");
-    send_key('ret');
-
-    sleep(60); # Wait for login
-
-    assert_screen("fail-here");
-
+    x11_start_program('xterm');
+    send_key('alt-f10');  # maximize xterm to ease troubleshooting
+    assert_script_run('sdw-updater --skip-delta 0'); # test subsequent updates
+    assert_screen("securedrop-launcher-updates-in-progress", timeout => 10);
+    assert_screen("securedrop-launcher-updates-complete", timeout => 1200);
+    if (check_screen("securedrop-launcher-updates-complete-reboot")) {
+        assert_and_click("securedrop-launcher-updates-complete-reboot");
+        $self->handle_system_startup;
+        assert_and_click("securedrop-launch-from-desktop-icon", dclick => 1);
+    } else {
+        assert_and_click("securedrop-launcher-updates-complete-continue");
+    }
+    if (check_screen('securedrop-client-login-screen', 5)) {
+        send_key('alt-f4');  # exit SecureDrop client
+    }
 
 }
 
