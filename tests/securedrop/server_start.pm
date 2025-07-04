@@ -38,12 +38,27 @@ sub run {
     assert_script_run('set -o pipefail'); # Ensure pipes fail\
     assert_script_run('export JOURNALIST_ONION=$(qvm-run -p sd-dev "sudo cat /var/lib/docker/volumes/sd-onion-services/_data/journalist/hostname")');
     assert_script_run('export JOURNALIST_KEY=$(qvm-run -p sd-dev "sudo cat /var/lib/docker/volumes/sd-onion-services/_data/journalist/authorized_clients/client.auth"| cut -d: -f3)');
-    assert_script_run('sudo mkdir -p /usr/share/securedrop-workstation-dom0-config/');
-    assert_script_run('echo {\"submission_key_fpr\": \"65A1B5FF195B56353CC63DFFCC40EF1228271441\", \"hidserv\": {\"hostname\": \"$JOURNALIST_ONION\", \"key\": \"$JOURNALIST_KEY\"}, \"environment\": \"prod\", \"vmsizes\": {\"sd_app\": 10, \"sd_log\": 5}} | sudo tee /usr/share/securedrop-workstation-dom0-config/config.json');
-    type_string("cd /usr/bin && python3 -i sdw-admin --validate\n");
-    type_string("copy_config()\n");
-    sleep(1);
-    send_key('ctrl-d');
-    assert_script_run("sudo qubesctl --targets dom0 state.highstate || true", timeout => 1000);  # Reapply due to secrets change
+
+    # Propagate the new values
+    my %vm_config_values = (
+        "qvm-features sd-proxy vm-config.SD_PROXY_ORIGIN"  => "\"http://\$JOURNALIST_ONION\"",
+        "qvm-features sd-whonix vm-config.SD_HIDSERV_HOSTNAME" => "\"\$JOURNALIST_ONION\"",
+        "qvm-features sd-whonix vm-config.SD_HIDSERV_KEY" => "\"\$JOURNALIST_KEY\""
+    );
+    while (my ($feature, $value) = each %vm_config_values) {
+        assert_script_run($feature);  # Ensure feature exists (failure indicates: no longer correct way to set value)
+        assert_script_run($feature . " " . $value);  # Then set the actual value
+        assert_script_run($feature);  # Confirm successful change
+    }
+
+    # Restart qubes to apply configurations
+    script_run('qvm-shutdown --force sd-proxy sd-whonix');
+    script_run('qvm-start sd-proxy sd-whonix');
+
+    sleep(300); # Wait 5 mins for onion to propagate (may not be needed)
+
+
+    send_key('alt-f4');
+
 }
 1;

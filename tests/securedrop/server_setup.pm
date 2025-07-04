@@ -46,9 +46,9 @@ sub setup_securedrop_server {
     type_string("cd securedrop\n");
     type_string("make dev\n");
     assert_screen('securedrop-server-running', timeout=>1200);
-    send_key('ctrl-c');  # stop server, now that intial setup has succeeded
-    sleep(5);
-    send_key('alt-f4');
+    # send_key('ctrl-c');  # stop server, now that intial setup has succeeded
+    # sleep(5);
+    # send_key('alt-f4');
 
 }
 

@@ -19,7 +19,11 @@ use networking;
 sub run {
     my ($self) = @_;
 
-    $self->select_gui_console;
+    # Commented out to see if it resolves:
+    #     Test died: no candidate needle with tag(s) 'x11' matched
+    # $self->select_gui_console;
+
+
 
     x11_start_program('xterm');
     send_key('alt-f10');  # maximize xterm to ease troubleshooting
@@ -30,8 +34,11 @@ sub run {
     # # Close login window (next step opens it already)
     # send_key('alt-f4');
 
-    script_run("make -C securedrop-workstation/ run-client");
+    assert_script_run("sudo qubes-dom0-update -y xdotool oathtool");  # "make run-client" dependencies
+    assert_script_run('qvm-start sd-app --skip-if-running');  # ensure sd-app is running due to TOTP lifespan
+    script_run("make -C securedrop-workstation/ run-client && exit");
     sleep(60); # Wait for login
+    sleep(600); # DEBUG window
 
     assert_screen("fail-here");
 
