@@ -16,6 +16,23 @@ use strict;
 use testapi;
 use networking;
 
+
+sub install_bootstrap_dev {
+    # Assumes terminal window is open
+    # Assumes "curl_via_netvm"
+
+    # Building SecureDrop Workstation RPM and installing it in dom0
+    assert_script_run('sudo qubes-dom0-update -y make unzip');
+
+    # Download source from git commit reference
+    my $repo_archive_url = "https://github.com/freedomofpress/securedrop-workstation/archive/";
+    assert_script_run("curl -f -L -o - $repo_archive_url" . get_var('GIT_REF') . '.zip > sdw.zip');
+    assert_script_run('unzip sdw.zip');
+    assert_script_run('mv securedrop-workstation-* securedrop-workstation');
+    assert_script_run('cd securedrop-workstation && make bootstrap-dev');
+};
+
+
 sub install_staging {
     # Assumes terminal window is open
 
@@ -83,7 +100,8 @@ sub run {
 
     assert_script_run('set -o pipefail'); # Ensure pipes fail\
 
-    install_dev;
+    install_bootstrap_dev; # installs the keyring package
+    install_dev; # installs the rpm from locally-built source at this gitref
 
     assert_script_run('echo {\"submission_key_fpr\": \"65A1B5FF195B56353CC63DFFCC40EF1228271441\", \"hidserv\": {\"hostname\": \"bnbo6ryxq24fz27chs5fidscyqhw2hlyweelg4nmvq76tpxvofpyn4qd.onion\", \"key\": \"FDF476DUDSB5M27BIGEVIFCFGHQJ46XS3STAP7VG6Z2OWXLHWZPA\"}, \"environment\": \"prod\", \"vmsizes\": {\"sd_app\": 10, \"sd_log\": 5}} | sudo tee /usr/share/securedrop-workstation-dom0-config/config.json');
     assert_script_run('curl https://raw.githubusercontent.com/freedomofpress/securedrop/d91dc67/securedrop/tests/files/test_journalist_key.sec.no_passphrase | sudo tee /usr/share/securedrop-workstation-dom0-config/sd-journalist.sec');
