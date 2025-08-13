@@ -27,7 +27,7 @@ sub run {
     # Update onion address
     x11_start_program('xterm');
 
-    background_script_run("qvm-run -p sd-dev \"cd securedrop\; sed -i 's|/dev/stdout|/dev/null|g' securedrop/bin/dev-shell && make dev-tor\" </dev/null 2>&1 >/dev/null"); # | sed 's/^/[SD Server] /'"); # grep "journalist interface" so that it does not interfere with needles
+    background_script_run("qvm-run -p sd-dev \"cd securedrop\; sed -i 's|/dev/stdout|/dev/null|g' securedrop/bin/dev-shell && USE_PODMAN=1 make dev-tor\" </dev/null 2>&1 >/dev/null"); # | sed 's/^/[SD Server] /'"); # grep "journalist interface" so that it does not interfere with needles
     #assert_script_run("tail -f /tmp/securedrop-server.log | grep -m 1 '=> Journalist Interface <='", timeout => 90);
     # wait_serial("=> Journalist Interface <=");
     sleep(60); # wait for onion address to propagate
