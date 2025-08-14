@@ -81,17 +81,26 @@ sub run {
 
     curl_via_netvm;  # necessary for curling script and uploading logs
 
-    assert_script_run('set -o pipefail'); # Ensure pipes fail\
+    # NOTE: temporary benchmarking
 
-    install_dev;
+    script_run("sudo qubesctl state.single qvm.template_installed name=debian-12-minimal", timeout => 1500);  # does salt add much overhead?
+    script_run("curl -o - https://gist.githubusercontent.com/deeplow/11aa8506ab71800e7eb6f56cc62420af/raw/4b7866ab2191c494e1d58c582538fa9280693aa4/apt_sources | qvm-run -p --user root debian-12-minimal 'tee /etc/apt/sources.list.d/apt_freedom_press.sources'");
+    script_run("qvm-run -p debian-12-minimal 'apt update'");
+    script_run("time qvm-run -u root -p debian-12-minimal 'apt install securedrop-export'", timeout => 1500);
 
-    assert_script_run('echo {\"submission_key_fpr\": \"65A1B5FF195B56353CC63DFFCC40EF1228271441\", \"hidserv\": {\"hostname\": \"bnbo6ryxq24fz27chs5fidscyqhw2hlyweelg4nmvq76tpxvofpyn4qd.onion\", \"key\": \"FDF476DUDSB5M27BIGEVIFCFGHQJ46XS3STAP7VG6Z2OWXLHWZPA\"}, \"environment\": \"prod\", \"vmsizes\": {\"sd_app\": 10, \"sd_log\": 5}} | sudo tee /usr/share/securedrop-workstation-dom0-config/config.json');
-    assert_script_run('curl https://raw.githubusercontent.com/freedomofpress/securedrop/d91dc67/securedrop/tests/files/test_journalist_key.sec.no_passphrase | sudo tee /usr/share/securedrop-workstation-dom0-config/sd-journalist.sec');
-    assert_script_run('sdw-admin --validate');
 
-    assert_script_run('env xset -dpms; env xset s off', valid => 0, timeout => 10); # disable screen blanking during long command
-    assert_script_run('sdw-admin --apply | tee /tmp/sdw-admin-apply.log',  timeout => 6000);  # long timeout due to slow virt.
-    upload_logs('/tmp/sdw-admin-apply.log', failok => 1);
+
+    # assert_script_run('set -o pipefail'); # Ensure pipes fail\
+
+    # install_dev;
+
+    # assert_script_run('echo {\"submission_key_fpr\": \"65A1B5FF195B56353CC63DFFCC40EF1228271441\", \"hidserv\": {\"hostname\": \"bnbo6ryxq24fz27chs5fidscyqhw2hlyweelg4nmvq76tpxvofpyn4qd.onion\", \"key\": \"FDF476DUDSB5M27BIGEVIFCFGHQJ46XS3STAP7VG6Z2OWXLHWZPA\"}, \"environment\": \"prod\", \"vmsizes\": {\"sd_app\": 10, \"sd_log\": 5}} | sudo tee /usr/share/securedrop-workstation-dom0-config/config.json');
+    # assert_script_run('curl https://raw.githubusercontent.com/freedomofpress/securedrop/d91dc67/securedrop/tests/files/test_journalist_key.sec.no_passphrase | sudo tee /usr/share/securedrop-workstation-dom0-config/sd-journalist.sec');
+    # assert_script_run('sdw-admin --validate');
+
+    # assert_script_run('env xset -dpms; env xset s off', valid => 0, timeout => 10); # disable screen blanking during long command
+    # assert_script_run('sdw-admin --apply | tee /tmp/sdw-admin-apply.log',  timeout => 6000);  # long timeout due to slow virt.
+    # upload_logs('/tmp/sdw-admin-apply.log', failok => 1);
 
     send_key('alt-f4');  # close terminal
 }
