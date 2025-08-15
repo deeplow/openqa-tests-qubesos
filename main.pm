@@ -176,6 +176,8 @@ if (check_var('SECUREDROP_INSTALL', '1')) {
     # Setup sys-whonix connection so it does not interfere later
     autotest::loadtest("tests/whonix_firstrun.pm", name => "Setup_sys-whonix");
 
+    autotest::loadtest("tests/securedrop/precache_installation.pm");
+
     autotest::loadtest("tests/securedrop/install_workstation.pm");
 
     # Setup sd-whonix connection
