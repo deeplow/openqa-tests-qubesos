@@ -79,6 +79,12 @@ sub run {
     x11_start_program('xterm');
     send_key('alt-f10');  # maximize xterm to ease troubleshooting
 
+    # BEFORE: expected focus on xterm
+    script_run('qvm-run -p whonix-gateway-17 "apt-get indextargets && exit 1"', timeout => 120);
+    # AFTER: expected focus stolen from on xterm
+
+    assert_script_run('echo if correct then this should not be typed && false');
+
     curl_via_netvm;  # necessary for curling script and uploading logs
 
     assert_script_run('set -o pipefail'); # Ensure pipes fail\
