@@ -61,8 +61,20 @@ sub install_dev {
     assert_script_run("ls");
 
     assert_script_run('qvm-run -p sd-dev "cd securedrop-workstation && make build-rpm"', timeout => 1000);
-    assert_script_run("qvm-run --pass-io sd-dev 'cat /home/user/securedrop-workstation/rpm-build/RPMS/noarch/*.rpm' > /tmp/sdw.rpm");
-    assert_script_run('sudo dnf -y install /tmp/sdw.rpm', timeout => 1000);
+
+    # HACK: install local RPM via qubes-dom0-update. Simply doing dnf install on
+    #       local RPM files in dom0 is not possible if there are dependencies
+    #       (it can't fetch them). For this, qubes-dom0-update is needed, but it
+    #       won't work out of the box. The hack is to make the local RPM in both
+    #       dom0 and sys-firewall (default updatevm). This way, the dom0 RPM
+    #       commands as well as the ones in sys-firewall will not complain about
+    #       not finding the RPM path. Incidentally because local files are not
+    #       transfered to dom0 via qubes.ReceiveUpdates, no signature checking
+    #       happens.
+    my $sdw_rpm_path = "/tmp/sdw.rpm";
+    assert_script_run("qvm-run --pass-io sd-dev 'cat /home/user/securedrop-workstation/rpm-build/RPMS/noarch/*.rpm' > $sdw_rpm_path");
+    assert_script_run("cat $sdw_rpm_path | qvm-run -p sys-firewall \"tee $sdw_rpm_path > /dev/null\"");
+    assert_script_run("sudo qubes-dom0-update -y $sdw_rpm_path", timeout => 1000);
 };
 
 sub run {
