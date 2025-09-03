@@ -42,6 +42,9 @@ sub run {
     assert_script_run('qvm-template install fedora-42-xfce', timeout => 1500);
     assert_script_run('qvm-template install debian-12-minimal', timeout => 1500);
     assert_script_run('qubes-vm-update --force-update --show-output', timeout => 3600);
+
+    send_key('alt-f4');  # close xterm
+
 }
 
 sub post_fail_hook {
